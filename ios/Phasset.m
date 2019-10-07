@@ -12,6 +12,8 @@ RCT_EXPORT_METHOD(requestImage:(NSDictionary *)params
                   rejecter:(RCTPromiseRejectBlock)reject)
 {
     NSString *assetId = [RCTConvert NSString:params[@"id"]] ?: @"";
+    int maxWidth = [params[@"maxWidth"] intValue] ?: 1024;
+    int maxHeight = [params[@"maxHeight"] intValue] ?: 1024;
     
     PHImageManager *manager = [PHImageManager defaultManager];
     PHImageRequestOptions* options = [[PHImageRequestOptions alloc] init];
@@ -22,7 +24,7 @@ RCT_EXPORT_METHOD(requestImage:(NSDictionary *)params
     
     NSArray* localIds = [NSArray arrayWithObjects: assetId, nil];
     PHAsset * _Nullable asset = [PHAsset fetchAssetsWithLocalIdentifiers:localIds options:nil].firstObject;
-    CGSize targetSize = CGSizeMake(512, 512);
+    CGSize targetSize = CGSizeMake(maxWidth, maxHeight);
     
     [manager requestImageForAsset:(PHAsset *)asset
                        targetSize:(CGSize)targetSize
