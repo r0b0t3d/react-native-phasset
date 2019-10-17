@@ -3,13 +3,18 @@
   "title": "React Native Phasset",
   "version": "1.0.1",
   "description": "TODO",
-  "main": "index.js",
+  "main": "lib/index.js",
   "scripts": {
+    "deploy-lib": "cp -R lib ../outdoorvideo-app/node_modules/react-native-phasset/",
+    "deploy-ios": "cp -R ios ../outdoorvideo-app/node_modules/react-native-phasset/",
+    "local-push": "yarn deploy-lib & yarn deploy-ios",
+
+
     "format": "prettier --write \"src/**/*.ts\" \"src/**/*.js\"",
     "lint": "eslint src/**/*.ts",
     "fix-code": "prettier-eslint --write 'src/**/*.{ts,tsx}' ",
     "test": "jest --config jestconfig.json --passWithNoTests",
-    "build": "tsc",
+    "build": "tsc && yarn local-push",
     "prepare": "npm run build",
     "prepublishOnly": "npm test && npm run lint",
     "preversion": "npm run lint",

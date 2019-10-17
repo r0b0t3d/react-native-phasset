@@ -1,8 +1,15 @@
-export declare type AssetParams = {
+export interface AssetParams {
     id: string;
-};
-declare function requestImage(params: AssetParams): any;
+    assetType?: string;
+}
+export interface ImageRequestParams extends AssetParams {
+    maxWidth?: number;
+    maxHeight?: number;
+}
+declare function isExists({ id, assetType }: AssetParams): any;
+declare function requestImage(params: ImageRequestParams): any;
 declare const _default: {
+    isExists: typeof isExists;
     requestImage: typeof requestImage;
 };
 export default _default;

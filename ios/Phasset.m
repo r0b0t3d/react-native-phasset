@@ -3,9 +3,50 @@
 
 #import <React/RCTConvert.h>
 
+@implementation RCTConvert (PHFetchOptions)
+
++ (PHFetchOptions *)PHFetchOptionsFromMediaType:(NSString *)mediaType
+{
+  // This is not exhaustive in terms of supported media type predicates; more can be added in the future
+  NSString *const lowercase = [mediaType lowercaseString];
+  
+  if ([lowercase isEqualToString:@"photos"]) {
+    PHFetchOptions *const options = [PHFetchOptions new];
+    options.predicate = [NSPredicate predicateWithFormat:@"mediaType = %d", PHAssetMediaTypeImage];
+    return options;
+  } else if ([lowercase isEqualToString:@"videos"]) {
+    PHFetchOptions *const options = [PHFetchOptions new];
+    options.predicate = [NSPredicate predicateWithFormat:@"mediaType = %d", PHAssetMediaTypeVideo];
+    return options;
+  } else {
+    if (![lowercase isEqualToString:@"all"]) {
+      RCTLogError(@"Invalid filter option: '%@'. Expected one of 'photos',"
+                  "'videos' or 'all'.", mediaType);
+    }
+    // This case includes the "all" mediatype
+    PHFetchOptions *const options = [PHFetchOptions new];
+    return options;
+  }
+}
+
+@end
+
 @implementation Phasset
 
 RCT_EXPORT_MODULE()
+
+RCT_EXPORT_METHOD(checkExists:(NSDictionary *)params
+                  resolver:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+{
+    NSString *assetId = [RCTConvert NSString:params[@"id"]] ?: @"";
+    NSArray* localIds = [NSArray arrayWithObjects: assetId, nil];
+    NSString *const mediaType = [RCTConvert NSString:params[@"assetType"]];
+
+    PHFetchOptions *const options = [RCTConvert PHFetchOptionsFromMediaType:mediaType];
+    PHAsset * _Nullable asset = [PHAsset fetchAssetsWithLocalIdentifiers:localIds options:options].firstObject;
+    resolve(asset != NULL ? @YES : @NO);
+}
 
 RCT_EXPORT_METHOD(requestImage:(NSDictionary *)params
                   resolver:(RCTPromiseResolveBlock)resolve
