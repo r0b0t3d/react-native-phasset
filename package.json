@@ -19,8 +19,8 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/github_account/react-native-phasset.git",
-    "baseUrl": "https://github.com/github_account/react-native-phasset"
+    "url": "git+https://github.com/r0b0t3d/react-native-phasset.git",
+    "baseUrl": "https://github.com/r0b0t3d/react-native-phasset"
   },
   "keywords": [
     "react-native"
