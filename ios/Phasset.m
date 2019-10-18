@@ -3,6 +3,27 @@
 
 #import <React/RCTConvert.h>
 
+static NSString *const kErrorAuthRestricted = @"E_PHOTO_LIBRARY_AUTH_RESTRICTED";
+static NSString *const kErrorAuthDenied = @"E_PHOTO_LIBRARY_AUTH_DENIED";
+
+typedef void (^PhotosAuthorizedBlock)(void);
+
+static void requestPhotoLibraryAccess(RCTPromiseRejectBlock reject, PhotosAuthorizedBlock authorizedBlock) {
+  PHAuthorizationStatus authStatus = [PHPhotoLibrary authorizationStatus];
+  if (authStatus == PHAuthorizationStatusRestricted) {
+    reject(kErrorAuthRestricted, @"Access to photo library is restricted", nil);
+  } else if (authStatus == PHAuthorizationStatusAuthorized) {
+    authorizedBlock();
+  } else if (authStatus == PHAuthorizationStatusNotDetermined) {
+    [PHPhotoLibrary requestAuthorization:^(PHAuthorizationStatus status) {
+      requestPhotoLibraryAccess(reject, authorizedBlock);
+    }];
+  } else {
+    reject(kErrorAuthDenied, @"Access to photo library was denied", nil);
+  }
+}
+
+
 @implementation RCTConvert (PHFetchOptions)
 
 + (PHFetchOptions *)PHFetchOptionsFromMediaType:(NSString *)mediaType
@@ -29,6 +50,18 @@
   }
 }
 
+RCT_ENUM_CONVERTER(PHAssetCollectionSubtype, (@{
+   @"album": @(PHAssetCollectionSubtypeAny),
+   @"all": @(PHAssetCollectionSubtypeSmartAlbumUserLibrary),
+   @"event": @(PHAssetCollectionSubtypeAlbumSyncedEvent),
+   @"faces": @(PHAssetCollectionSubtypeAlbumSyncedFaces),
+   @"library": @(PHAssetCollectionSubtypeSmartAlbumUserLibrary),
+   @"photo-stream": @(PHAssetCollectionSubtypeAlbumMyPhotoStream), // incorrect, but legacy
+   @"photostream": @(PHAssetCollectionSubtypeAlbumMyPhotoStream),
+   @"saved-photos": @(PHAssetCollectionSubtypeAny), // incorrect, but legacy correspondence in PHAssetCollectionSubtype
+   @"savedphotos": @(PHAssetCollectionSubtypeAny), // This was ALAssetsGroupSavedPhotos, seems to have no direct correspondence in PHAssetCollectionSubtype
+}), PHAssetCollectionSubtypeAny, integerValue)
+
 @end
 
 @implementation Phasset
@@ -40,12 +73,40 @@ RCT_EXPORT_METHOD(checkExists:(NSDictionary *)params
                   rejecter:(RCTPromiseRejectBlock)reject)
 {
     NSString *assetId = [RCTConvert NSString:params[@"id"]] ?: @"";
-    NSArray* localIds = [NSArray arrayWithObjects: assetId, nil];
     NSString *const mediaType = [RCTConvert NSString:params[@"assetType"]];
+    NSString *const groupName = [RCTConvert NSString:params[@"groupName"]];
+    NSString *const groupTypes = [RCTConvert NSString:params[@"groupTypes"]];
 
     PHFetchOptions *const options = [RCTConvert PHFetchOptionsFromMediaType:mediaType];
-    PHAsset * _Nullable asset = [PHAsset fetchAssetsWithLocalIdentifiers:localIds options:options].firstObject;
-    resolve(asset != NULL ? @YES : @NO);
+    if (groupName != nil) {
+        [self getCollection:groupName groupTypes:groupTypes rejecter:reject completion:^(PHAssetCollection *assetCollection) {
+            if (assetCollection != nil) {
+                PHFetchOptions *const assetFetchOptions = [RCTConvert PHFetchOptionsFromMediaType:mediaType];
+                // Find asset inside collection
+                PHFetchResult<PHAsset *> *const assetsFetchResult = [PHAsset fetchAssetsInAssetCollection:assetCollection options:assetFetchOptions];
+                BOOL __block exists = NO;
+                [assetsFetchResult enumerateObjectsUsingBlock:^(PHAsset * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+                    NSString *const uri = [NSString stringWithFormat:@"ph://%@", [obj localIdentifier]];
+                    if ([uri isEqualToString:assetId]) {
+                        exists = YES;
+                        *stop = YES;
+                    }
+                }];
+                resolve(exists ? @YES : @NO);
+            }
+        }];
+    } else {
+        PHFetchResult<PHAsset *> *const assetsFetchResult = [PHAsset fetchAssetsWithOptions:options];
+        BOOL __block exists = NO;
+        [assetsFetchResult enumerateObjectsUsingBlock:^(PHAsset * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+            NSString *const uri = [NSString stringWithFormat:@"ph://%@", [obj localIdentifier]];
+            if ([uri isEqualToString:assetId]) {
+                exists = YES;
+                *stop = YES;
+            }
+        }];
+        resolve(exists ? @YES : @NO);
+    }
 }
 
 RCT_EXPORT_METHOD(requestImage:(NSDictionary *)params
@@ -102,6 +163,30 @@ RCT_EXPORT_METHOD(requestImage:(NSDictionary *)params
         
         resolve(data);
     }];
+}
+
+- (void)getCollection:(NSString*)collectionName groupTypes:(NSString*)groupTypes rejecter:(RCTPromiseRejectBlock)reject completion:(void(^)(PHAssetCollection*))completion {
+    PHFetchOptions *const collectionFetchOptions = [PHFetchOptions new];
+    collectionFetchOptions.sortDescriptors = @[[NSSortDescriptor sortDescriptorWithKey:@"endDate" ascending:NO]];
+    collectionFetchOptions.predicate = [NSPredicate predicateWithFormat:[NSString stringWithFormat:@"localizedTitle == '%@'", collectionName]];
+    // If groupTypes is "all", we want to fetch the SmartAlbum "all photos". Otherwise, all
+    // other groupTypes values require the "album" collection type.
+    PHAssetCollectionType const collectionType = ([groupTypes isEqualToString:@"all"]
+                                                  ? PHAssetCollectionTypeSmartAlbum
+                                                  : PHAssetCollectionTypeAlbum);
+    PHAssetCollectionSubtype const collectionSubtype = [RCTConvert PHAssetCollectionSubtype:groupTypes];
+    
+    requestPhotoLibraryAccess(reject, ^{
+        PHFetchResult<PHAssetCollection *> *const assetCollectionFetchResult = [PHAssetCollection fetchAssetCollectionsWithType:collectionType subtype:collectionSubtype options:nil];
+        [assetCollectionFetchResult enumerateObjectsUsingBlock:^(PHAssetCollection * _Nonnull assetCollection, NSUInteger collectionIdx, BOOL * _Nonnull stopCollections) {
+            if ([collectionName isEqualToString:[assetCollection localizedTitle]]) {
+                completion(assetCollection);
+                *stopCollections = YES;
+            }
+        }];
+        completion(nil);
+    });
+    
 }
 
 - (NSString*) getTmpDirectory {

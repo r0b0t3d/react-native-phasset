@@ -6,6 +6,8 @@ const { Phasset } = NativeModules;
 export interface AssetParams {
   id: string;
   assetType?: 'all' | 'videos' | 'photos';
+  groupTypes?: 'album' | 'all' | 'event' | 'faces' | 'library' | 'photostream' | 'savedphotos';
+  groupName?: string;
 }
 
 export interface ImageRequestParams extends AssetParams {
@@ -13,10 +15,12 @@ export interface ImageRequestParams extends AssetParams {
   maxHeight?: number;
 }
 
-function isExists({ id, assetType = 'all' }: AssetParams) {
+function isExists({ id, assetType = 'all', groupTypes = 'all', ...others }: AssetParams) {
   return Phasset.checkExists({
     id,
     assetType,
+    groupTypes,
+    ...others,
   });
 }
 
