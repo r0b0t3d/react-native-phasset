@@ -146,6 +146,12 @@ RCT_EXPORT_METHOD(requestImage:(NSDictionary *)params
         NSDictionary* exif = [[CIImage imageWithData:imageData] properties];
         
         NSString *filePath = [self saveFile:imageData];
+        
+        NSDictionary* location = asset.location ? @{
+            @"latitude": @(asset.location.coordinate.latitude),
+            @"longitude": @(asset.location.coordinate.longitude)
+        } : [NSNull null];
+        
         NSDictionary* data = @{
             @"id": asset.localIdentifier,
             @"path": (filePath && ![filePath isEqualToString:(@"")]) ? filePath : [NSNull null],
@@ -157,6 +163,7 @@ RCT_EXPORT_METHOD(requestImage:(NSDictionary *)params
             @"mime": @"image/jpeg",
             @"size": [NSNumber numberWithUnsignedInteger:imageData.length],
             @"exif": (exif) ? exif : [NSNull null],
+            @"location": location,
             @"creationDate": (asset.creationDate) ? [NSString stringWithFormat:@"%.0f", [asset.creationDate timeIntervalSince1970]] : [NSNull null],
             @"modificationDate": (asset.modificationDate) ? [NSString stringWithFormat:@"%.0f", [asset.modificationDate timeIntervalSince1970]] : [NSNull null],
         };
