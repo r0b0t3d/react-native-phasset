@@ -104,6 +104,7 @@ public class ImageResizer {
 
         int orientation = ei.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
 
+        input.close();
         switch (orientation) {
             case ExifInterface.ORIENTATION_ROTATE_90:
                 return rotateImage(img, 90);
