@@ -47,11 +47,13 @@ public class ImageResizer {
             options.inJustDecodeBounds = true;
             InputStream imageStream = context.getContentResolver().openInputStream(photoUri);
             BitmapFactory.decodeStream(imageStream, null, options);
+            imageStream.close();
             // Calculate inSampleSize
             options.inSampleSize = calculateInSampleSize(options, reqWidth, reqHeight);
 
             // Decode bitmap with inSampleSize
             options.inJustDecodeBounds = false;
+            imageStream = context.getContentResolver().openInputStream(photoUri);
             Bitmap bitmap = BitmapFactory.decodeStream(imageStream, null, options);
             imageStream.close();
             return rotateImageIfRequired(context, bitmap, photoUri);
