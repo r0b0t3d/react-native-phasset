@@ -17,6 +17,7 @@ import com.facebook.react.bridge.WritableMap;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.UUID;
 
 public class PhassetModule extends ReactContextBaseJavaModule {
 
@@ -76,7 +77,7 @@ public class PhassetModule extends ReactContextBaseJavaModule {
             }
 
             // Save the resulting image
-            String fileName = System.currentTimeMillis() + "." + compressFormat.name();
+            String fileName = UUID.randomUUID().toString() + "." + compressFormat.name();
             File result = new File(context.getCacheDir(), fileName);
             ImageResizer.saveImage(result.getAbsolutePath(), scaleBitmap);
 
