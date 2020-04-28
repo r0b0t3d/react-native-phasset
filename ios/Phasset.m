@@ -116,6 +116,7 @@ RCT_EXPORT_METHOD(requestImage:(NSDictionary *)params
     NSString *assetId = [RCTConvert NSString:params[@"id"]] ?: @"";
     int maxWidth = [params[@"maxWidth"] intValue] ?: 1024;
     int maxHeight = [params[@"maxHeight"] intValue] ?: 1024;
+    BOOL useBase64 = [params[@"useBase64"] boolValue] ?: false;
     
     PHImageManager *manager = [PHImageManager defaultManager];
     PHImageRequestOptions* options = [[PHImageRequestOptions alloc] init];
@@ -147,7 +148,7 @@ RCT_EXPORT_METHOD(requestImage:(NSDictionary *)params
         
         NSString *filePath = [self saveFile:imageData];
         
-        NSDictionary* location = asset.location ? @{
+        NSDictionary* location = asset.location != nil ? @{
             @"latitude": @(asset.location.coordinate.latitude),
             @"longitude": @(asset.location.coordinate.longitude)
         } : [NSNull null];
@@ -155,6 +156,7 @@ RCT_EXPORT_METHOD(requestImage:(NSDictionary *)params
         NSDictionary* data = @{
             @"id": asset.localIdentifier,
             @"path": (filePath && ![filePath isEqualToString:(@"")]) ? filePath : [NSNull null],
+            @"base64": useBase64 ? [imageData base64EncodedStringWithOptions:0] : [NSNull null],
             @"sourceURL": (sourceURL) ? sourceURL : [NSNull null],
             @"localIdentifier": asset.localIdentifier,
             @"filename": [asset valueForKey:@"filename"],

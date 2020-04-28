@@ -13,6 +13,7 @@ export interface AssetParams {
 export interface ImageRequestParams extends AssetParams {
   maxWidth?: number;
   maxHeight?: number;
+  useBase64?: boolean;
 }
 
 function isExists({ id, assetType = 'all', groupTypes = 'all', ...others }: AssetParams) {
